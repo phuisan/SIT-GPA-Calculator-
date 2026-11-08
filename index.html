@@ -1,0 +1,310 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>SIT GPA Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column. Module table on top, a two-line result block pinned beneath it. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #16181d;
+  --muted: #5d6470;
+  --line: #d9dce3;
+  --accent: #d6001c;
+  --accent-fg: #ffffff;
+  --result-bg: #16181d;
+  --result-fg: #f5f6f8;
+  --result-label: #9aa1ad;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101216;
+    --surface: #181b21;
+    --fg: #eceef2;
+    --muted: #9aa1ad;
+    --line: #2b303a;
+    --accent: #ff4d5e;
+    --accent-fg: #101216;
+    --result-bg: #eceef2;
+    --result-fg: #101216;
+    --result-label: #5d6470;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101216;
+  --surface: #181b21;
+  --fg: #eceef2;
+  --muted: #9aa1ad;
+  --line: #2b303a;
+  --accent: #ff4d5e;
+  --accent-fg: #101216;
+  --result-bg: #eceef2;
+  --result-fg: #101216;
+  --result-label: #5d6470;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  padding-block: 32px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 {
+  font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin: 0;
+  text-wrap: balance;
+}
+h1 span { color: var(--accent); }
+
+.head { display: flex; flex-direction: column; gap: 4px; }
+.code {
+  margin: 0; font-family: var(--font-mono); font-size: 0.95rem; font-weight: 500;
+  letter-spacing: 0.06em; color: var(--muted);
+}
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; min-width: 480px; }
+th {
+  text-align: left; font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
+}
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th.col-grade, td.col-grade { width: 130px; }
+th.col-credit, td.col-credit { width: 120px; }
+th.col-x, td.col-x { width: 44px; }
+
+input, select {
+  width: 100%; font: inherit; color: var(--fg); background: transparent;
+  border: 1px solid transparent; border-radius: 4px; padding: 8px 8px; min-height: 40px;
+}
+input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+select { font-family: var(--font-mono); cursor: pointer; }
+input:hover, select:hover { border-color: var(--line); }
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+input::placeholder { color: var(--muted); }
+
+.icon-btn {
+  width: 36px; height: 36px; border: 0; background: transparent; color: var(--muted);
+  border-radius: 4px; cursor: pointer; font-size: 1.1rem; line-height: 1;
+}
+.icon-btn:hover { color: var(--accent); background: var(--bg); }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  font: inherit; font-weight: 500; padding: 9px 16px; min-height: 40px;
+  border-radius: 4px; cursor: pointer; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg);
+}
+.btn:hover { border-color: var(--fg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(0.92); }
+
+.result {
+  background: var(--result-bg); color: var(--result-fg);
+  border-radius: 6px; padding: 20px 22px;
+  display: grid; grid-template-columns: max-content 1fr; gap: 10px 18px; align-items: baseline;
+}
+.result dt {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--result-label);
+}
+.result dd { margin: 0; font-family: var(--font-mono); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.result dd.stat { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+#gpa { font-size: 2rem; font-variant-numeric: tabular-nums; }
+#cls { font-size: 1.25rem; }
+
+.ref { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 16px; align-items: start; }
+.ref-box { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px 6px; min-width: 0; overflow-x: auto; }
+.ref-box h2 { margin: 0 0 6px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ref-table { min-width: 0; }
+.ref-table th { padding: 8px 0; }
+.ref-table td { padding: 8px 12px 8px 0; font-size: 0.9rem; }
+.ref-table td:first-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 640px) { .ref { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+  .result { grid-template-columns: 1fr; gap: 2px; }
+  .result dd { margin-bottom: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main>
+  <header class="head">
+    <h1>SIT <span>GPA</span> Calculator</h1>
+    <p class="code">XXX2637</p>
+  </header>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Module name</th>
+          <th class="col-grade">Grade achieved</th>
+          <th class="col-credit">Credit units</th>
+          <th class="col-x"><span class="visually-hidden"></span></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="add" type="button">Add module</button>
+    <button class="btn primary" id="calc" type="button">Calculate</button>
+    <button class="btn" id="clear" type="button">Clear</button>
+  </div>
+
+  <dl class="result" aria-live="polite">
+    <dt>Modules</dt><dd id="mods" class="stat">—</dd>
+    <dt>Total credits</dt><dd id="credits" class="stat">—</dd>
+    <dt>GPA</dt><dd id="gpa">—</dd>
+    <dt>Degree classification</dt><dd id="cls">—</dd>
+  </dl>
+
+  <section class="ref">
+    <div class="ref-box">
+      <h2>Grade points</h2>
+      <table class="ref-table">
+        <thead><tr><th>Grade</th><th>Grade point</th></tr></thead>
+        <tbody>
+          <tr><td>A</td><td>5.0</td></tr>
+          <tr><td>A-</td><td>4.5</td></tr>
+          <tr><td>B+</td><td>4.0</td></tr>
+          <tr><td>B</td><td>3.5</td></tr>
+          <tr><td>B-</td><td>3.0</td></tr>
+          <tr><td>C+</td><td>2.5</td></tr>
+          <tr><td>C</td><td>2.0</td></tr>
+          <tr><td>D+</td><td>1.5</td></tr>
+          <tr><td>D</td><td>1.0</td></tr>
+          <tr><td>F</td><td>0.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ref-box">
+      <h2>Degree classification</h2>
+      <table class="ref-table">
+        <thead><tr><th>CGPA</th><th>Classification</th></tr></thead>
+        <tbody>
+          <tr><td>4.50 – 5.00</td><td>Honours with Highest Distinction</td></tr>
+          <tr><td>4.00 – 4.49</td><td>Honours with Distinction</td></tr>
+          <tr><td>3.50 – 3.99</td><td>Honours with Merit</td></tr>
+          <tr><td>3.00 – 3.49</td><td>Honours</td></tr>
+          <tr><td>2.00 – 2.99</td><td>Pass</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  // Official SIT 5.0 grade point scale.
+  var SCALE = [
+    ["A", 5.0], ["A-", 4.5], ["B+", 4.0], ["B", 3.5], ["B-", 3.0],
+    ["C+", 2.5], ["C", 2.0], ["D+", 1.5], ["D", 1.0], ["F", 0.0]
+  ];
+  var POINTS = {};
+  SCALE.forEach(function (g) { POINTS[g[0]] = g[1]; });
+
+  // Official SIT degree classification bands (CGPA).
+  function classify(g) {
+    if (g >= 4.5) return "Honours with Highest Distinction";
+    if (g >= 4.0) return "Honours with Distinction";
+    if (g >= 3.5) return "Honours with Merit";
+    if (g >= 3.0) return "Honours";
+    if (g >= 2.0) return "Pass";
+    return "Below Pass";
+  }
+
+  var tbody = document.getElementById("rows");
+  var gpaEl = document.getElementById("gpa");
+  var clsEl = document.getElementById("cls");
+  var modsEl = document.getElementById("mods");
+  var crEl = document.getElementById("credits");
+  var uid = 0;
+
+  function addRow(name, grade, credits) {
+    uid++;
+    var tr = document.createElement("tr");
+    var opts = '<option value="">Select</option>' + SCALE.map(function (g) {
+      return '<option value="' + g[0] + '"' + (g[0] === grade ? " selected" : "") + ">" + g[0] + "</option>";
+    }).join("");
+    tr.innerHTML =
+      '<td><input id="n' + uid + '" type="text" aria-label="Module name" placeholder="Module name"></td>' +
+      '<td class="col-grade"><select id="g' + uid + '" aria-label="Grade achieved">' + opts + "</select></td>" +
+      '<td class="col-credit"><input id="c' + uid + '" type="number" min="0" step="1" inputmode="numeric" aria-label="Credit units" placeholder="0"></td>' +
+      '<td class="col-x"><button class="icon-btn" type="button" aria-label="Remove module">&times;</button></td>';
+    tr.querySelector("input[type=text]").value = name || "";
+    tr.querySelector("input[type=number]").value = credits === undefined ? "" : credits;
+    tr.querySelector(".icon-btn").addEventListener("click", function () {
+      tr.remove();
+      compute();
+    });
+    tbody.appendChild(tr);
+    return tr;
+  }
+
+  function compute() {
+    var totalPts = 0, totalCr = 0, count = 0;
+    tbody.querySelectorAll("tr").forEach(function (tr) {
+      var grade = tr.querySelector("select").value;
+      var cr = parseFloat(tr.querySelector("input[type=number]").value);
+      if (grade && POINTS.hasOwnProperty(grade) && isFinite(cr) && cr > 0) {
+        totalPts += POINTS[grade] * cr;
+        totalCr += cr;
+        count++;
+      }
+    });
+    if (totalCr === 0) {
+      gpaEl.textContent = "—";
+      clsEl.textContent = "—";
+      modsEl.textContent = "0";
+      crEl.textContent = "0";
+      return;
+    }
+    var gpa = totalPts / totalCr;
+    gpaEl.textContent = gpa.toFixed(2) + " / 5";
+    clsEl.textContent = classify(gpa);
+    modsEl.textContent = String(count);
+    crEl.textContent = String(totalCr);
+  }
+
+  document.getElementById("add").addEventListener("click", function () {
+    addRow("", "", undefined).querySelector("input").focus();
+  });
+  document.getElementById("calc").addEventListener("click", compute);
+  document.getElementById("clear").addEventListener("click", function () {
+    tbody.innerHTML = "";
+    addRow("", "", undefined);
+    compute();
+  });
+  tbody.addEventListener("input", compute);
+  tbody.addEventListener("change", compute);
+
+  // Example modules so the table opens in a working state. Replace with your own.
+  addRow("Example module 1", "A-", 4);
+  addRow("Example module 2", "B+", 4);
+  addRow("Example module 3", "B", 2);
+  addRow("Example module 4", "A", 4);
+  compute();
+})();
+</script>
+
+</body></html>
